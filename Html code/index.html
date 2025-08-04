@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Attendance Taker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-image: url('school1.jpg'); /* Replace with your image file */
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-attachment: fixed;
+      padding: 40px;
+      margin: 0;
+      color: #333;
+    }
+
+    .overlay {
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 10px;
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+
+    h2 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 5px;
+    }
+
+    form {
+      margin-bottom: 25px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 15px;
+    }
+
+    button {
+      background-color: #3498db;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: #f9f9f9;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background-color: #2980b9;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+<div class="overlay">
+  <h2>Add Student</h2>
+  <form id="studentForm">
+    <input type="text" id="studentName" placeholder="Enter student name" required />
+    <button type="submit">Add Student</button>
+  </form>
+
+  <h2>Mark Attendance</h2>
+  <form id="attendanceForm">
+    <select id="studentSelect" required></select>
+    <input type="date" id="attendanceDate" required />
+    <select id="attendanceStatus" required>
+      <option value="true">Present</option>
+      <option value="false">Absent</option>
+    </select>
+    <button type="submit">Submit Attendance</button>
+  </form>
+
+  <h2>All Attendance Records</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Student</th>
+      </tr>
+    </thead>
+    <tbody id="attendanceTableBody"></tbody>
+  </table>
+</div>
+
+<script>
+  const baseURL = 'http://localhost:8082';
+
+  async function loadStudents() {
+    const response = await fetch(`${baseURL}/students`);
+    const students = await response.json();
+    const select = document.getElementById('studentSelect');
+    select.innerHTML = '';
+    students.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s.id;
+      option.textContent = s.name;
+      select.appendChild(option);
+    });
+  }
+
+  document.getElementById('studentForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('studentName').value;
+    await fetch(`${baseURL}/students`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name })
+    });
+    document.getElementById('studentForm').reset();
+    loadStudents();
+    loadAttendance();
+  });
+
+  document.getElementById('attendanceForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const studentId = document.getElementById('studentSelect').value;
+    const date = document.getElementById('attendanceDate').value;
+    const present = document.getElementById('attendanceStatus').value;
+
+    await fetch(`${baseURL}/attendance`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ studentId, date, present })
+    });
+
+    document.getElementById('attendanceForm').reset();
+    loadAttendance();
+  });
+
+  async function loadAttendance() {
+    const response = await fetch(`${baseURL}/attendance`);
+    const records = await response.json();
+    const tbody = document.getElementById('attendanceTableBody');
+    tbody.innerHTML = '';
+    records.forEach(r => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${r.id}</td>
+        <td>${r.date}</td>
+        <td>${r.present === true ? 'Present' : 'Absent'}</td>
+        <td>${r.student.name}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  loadStudents();
+  loadAttendance();
+</script>
+
+</body>
+</html>
